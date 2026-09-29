@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { CoatingType, Pie, PieLayer } from './types';
 import { coatingTypes as initialCoatingTypes } from './data';
 import { PatternRenderer } from './PatternRenderer';
-import { downloadPieImage, exportPieAsPNG } from './PieExportImage';
+import { downloadPieImage, downloadAllPies, exportPieAsPNG } from './PieExportImage';
 
 const STORAGE_KEY = 'pie-constructor-data';
 const LAYER_HEIGHT = 36; // фиксированная высота слоя в визуализации
@@ -344,14 +344,24 @@ function App() {
             Создавайте и визуализируйте многослойные конструкции покрытий
           </p>
         </div>
-        {selectedPie && selectedPie.layers.length > 0 && (
-          <button
-            onClick={openExport}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-          >
-            📋 Экспорт
-          </button>
-        )}
+        <div className="flex gap-2">
+          {pies.some(p => p.layers.length > 0) && (
+            <button
+              onClick={() => downloadAllPies(pies.filter(p => p.layers.length > 0), withGaps)}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              📦 Экспорт всех
+            </button>
+          )}
+          {selectedPie && selectedPie.layers.length > 0 && (
+            <button
+              onClick={openExport}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              📋 Экспорт
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Export Modal */}
@@ -455,6 +465,26 @@ function App() {
                   >
                     📋 Скопировать в буфер
                   </button>
+                </div>
+              )}
+
+              {/* Экспорт всех пирогов */}
+              {pies.filter(p => p.layers.length > 0).length > 1 && (
+                <div className="mt-4 pt-4 border-t border-gray-700">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-200">Экспорт всех пирогов</h4>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {pies.filter(p => p.layers.length > 0).length} пирогов будут скачаны как PNG
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => downloadAllPies(pies.filter(p => p.layers.length > 0), withGaps)}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                    >
+                      📦 Скачать все
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

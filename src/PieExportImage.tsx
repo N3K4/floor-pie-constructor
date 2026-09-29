@@ -189,3 +189,27 @@ export const downloadPieImage = async (pie: Pie, withGaps: boolean = true) => {
     console.error('Export failed:', err);
   }
 };
+
+export const downloadAllPies = async (pies: Pie[], withGaps: boolean = true) => {
+  if (pies.length === 0) return;
+  
+  for (let i = 0; i < pies.length; i++) {
+    const pie = pies[i];
+    if (pie.layers.length === 0) continue;
+    
+    try {
+      const dataUrl = await exportPieAsPNG(pie, withGaps);
+      const link = document.createElement('a');
+      link.download = `пирог_${pie.number}.png`;
+      link.href = dataUrl;
+      link.click();
+      
+      // Небольшая задержка между скачиваниями
+      if (i < pies.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    } catch (err) {
+      console.error(`Failed to export pie ${pie.number}:`, err);
+    }
+  }
+};
