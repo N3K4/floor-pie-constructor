@@ -73,11 +73,11 @@ export const PieExportImage: React.FC<PieExportImageProps> = ({ pie, showGaps = 
       <defs>${patternDefs}</defs>
       
       <!-- Background -->
-      <rect width="${svgWidth}" height="${svgHeight}" fill="#1f2937"/>
+      <rect width="${svgWidth}" height="${svgHeight}" fill="#ffffff"/>
       
       <!-- Header -->
       <text x="${PADDING}" y="${PADDING + 20}" fill="#60a5fa" font-family="Arial, sans-serif" font-size="18" font-weight="bold">Пирог №${pie.number}</text>
-      <text x="${PADDING}" y="${PADDING + 42}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="12">${pie.name}</text>
+      <text x="${PADDING}" y="${PADDING + 42}" fill="#6b7280" font-family="Arial, sans-serif" font-size="12">${pie.name}</text>
       
       <!-- Layers -->
       ${layersReversed
@@ -88,8 +88,8 @@ export const PieExportImage: React.FC<PieExportImageProps> = ({ pie, showGaps = 
             <rect x="${x}" y="${y}" width="${PATTERN_WIDTH}" height="${LAYER_HEIGHT}" fill="url(#p-${layer.id})" stroke="#4b5563" stroke-width="0.5" rx="2"/>
             <text x="${x + 8}" y="${y + LAYER_HEIGHT / 2 + 4}" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold" opacity="0.9">${String(layer.coatingType.thickness)} мм</text>
             
-            <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 - 2}" fill="#e5e7eb" font-family="Arial, sans-serif" font-size="11" font-weight="500">${layer.coatingType.name}</text>
-            <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 + 12}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="10">${String(layer.coatingType.thickness)} мм</text>
+            <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 - 2}" fill="#1f2937" font-family="Arial, sans-serif" font-size="11" font-weight="500">${layer.coatingType.name}</text>
+            <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 + 12}" fill="#6b7280" font-family="Arial, sans-serif" font-size="10">${String(layer.coatingType.thickness)} мм</text>
           `;
         })
         .join('\n')}
@@ -130,9 +130,9 @@ export const exportPieAsPNG = (pie: Pie, showGaps: boolean = true): Promise<stri
 
     const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
       <defs>${patternDefs}</defs>
-      <rect width="${svgWidth}" height="${svgHeight}" fill="#1f2937"/>
+      <rect width="${svgWidth}" height="${svgHeight}" fill="#ffffff"/>
       <text x="${PADDING}" y="${PADDING + 20}" fill="#60a5fa" font-family="Arial, sans-serif" font-size="18" font-weight="bold">Пирог №${pie.number}</text>
-      <text x="${PADDING}" y="${PADDING + 42}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="12">${pie.name}</text>
+      <text x="${PADDING}" y="${PADDING + 42}" fill="#6b7280" font-family="Arial, sans-serif" font-size="12">${pie.name}</text>
       ${layersReversed
         .map((layer, i) => {
           const y = layerPositions[i];
@@ -140,8 +140,8 @@ export const exportPieAsPNG = (pie: Pie, showGaps: boolean = true): Promise<stri
           return `
             <rect x="${x}" y="${y}" width="${PATTERN_WIDTH}" height="${LAYER_HEIGHT}" fill="url(#p-${layer.id})" stroke="#4b5563" stroke-width="0.5" rx="2"/>
             <text x="${x + 8}" y="${y + LAYER_HEIGHT / 2 + 4}" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold" opacity="0.9">${String(layer.coatingType.thickness)} мм</text>
-            <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 - 2}" fill="#e5e7eb" font-family="Arial, sans-serif" font-size="11" font-weight="500">${layer.coatingType.name}</text>
-            <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 + 12}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="10">${String(layer.coatingType.thickness)} мм</text>
+            <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 - 2}" fill="#1f2937" font-family="Arial, sans-serif" font-size="11" font-weight="500">${layer.coatingType.name}</text>
+            <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 + 12}" fill="#6b7280" font-family="Arial, sans-serif" font-size="10">${String(layer.coatingType.thickness)} мм</text>
           `;
         })
         .join('\n')}
@@ -187,5 +187,29 @@ export const downloadPieImage = async (pie: Pie, withGaps: boolean = true) => {
     link.click();
   } catch (err) {
     console.error('Export failed:', err);
+  }
+};
+
+export const downloadAllPies = async (pies: Pie[], withGaps: boolean = true) => {
+  if (pies.length === 0) return;
+  
+  for (let i = 0; i < pies.length; i++) {
+    const pie = pies[i];
+    if (pie.layers.length === 0) continue;
+    
+    try {
+      const dataUrl = await exportPieAsPNG(pie, withGaps);
+      const link = document.createElement('a');
+      link.download = `пирог_${pie.number}.png`;
+      link.href = dataUrl;
+      link.click();
+      
+      // Небольшая задержка между скачиваниями
+      if (i < pies.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    } catch (err) {
+      console.error(`Failed to export pie ${pie.number}:`, err);
+    }
   }
 };
