@@ -11,7 +11,19 @@ function App() {
   const [pies, setPies] = useState<Pie[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      // Миграция: преобразуем числовые thickness в строки
+      return parsed.map((pie: Pie) => ({
+        ...pie,
+        layers: pie.layers.map((layer: PieLayer) => ({
+          ...layer,
+          coatingType: {
+            ...layer.coatingType,
+            thickness: String(layer.coatingType.thickness),
+          },
+        })),
+      }));
     } catch {
       return [];
     }
@@ -636,7 +648,7 @@ function App() {
                           {/* Thickness badge */}
                           <div className="absolute left-1 top-1/2 -translate-y-1/2">
                             <div className="text-[9px] text-white font-bold bg-black/60 px-1 py-0.5 rounded backdrop-blur-sm">
-                              {layer.coatingType.thickness} мм
+                              {String(layer.coatingType.thickness)} мм
                             </div>
                           </div>
                         </div>
@@ -649,7 +661,7 @@ function App() {
                           <div className="flex items-center gap-1">
                             <input
                               type="text"
-                              value={layer.coatingType.thickness}
+                              value={String(layer.coatingType.thickness ?? '')}
                               onChange={(e) => updateLayerThickness(layer.id, e.target.value)}
                               className="w-16 px-1.5 py-0.5 bg-gray-700 border border-gray-600 rounded text-[10px] text-gray-100 focus:outline-none focus:border-blue-500 font-mono"
                               title="Толщина (можно редактировать)"
@@ -712,7 +724,7 @@ function App() {
                         <span className="text-gray-300 flex-1 truncate">{layer.coatingType.name}</span>
                         <input
                           type="text"
-                          value={layer.coatingType.thickness}
+                          value={String(layer.coatingType.thickness ?? '')}
                           onChange={(e) => updateLayerThickness(layer.id, e.target.value)}
                           className="w-16 px-1 py-0.5 bg-gray-700 border border-gray-600 rounded text-[10px] text-gray-300 focus:outline-none focus:border-blue-500 font-mono text-right"
                         />

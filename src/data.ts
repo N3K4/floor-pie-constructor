@@ -88,8 +88,10 @@ export const coatingTypes: CoatingType[] = [
 ];
 
 /** Извлекает первое число из строки толщины для арифметических операций */
-export function parseThicknessValue(str: string): number {
-  const match = str.match(/[\d]+[.,]?\d*/);
+export function parseThicknessValue(str: string | number): number {
+  if (str === null || str === undefined) return 0;
+  const strValue = String(str);
+  const match = strValue.match(/[\d]+[.,]?\d*/);
   if (!match) return 0;
   return parseFloat(match[0].replace(',', '.'));
 }

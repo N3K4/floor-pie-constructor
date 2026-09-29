@@ -94,10 +94,10 @@ export const PieExportImage: React.FC<PieExportImageProps> = ({ pie, showGaps = 
           const x = PADDING + 30;
           return `
             <rect x="${x}" y="${y}" width="${PATTERN_WIDTH}" height="${LAYER_HEIGHT}" fill="url(#p-${layer.id})" stroke="#4b5563" stroke-width="0.5" rx="2"/>
-            <text x="${x + 8}" y="${y + LAYER_HEIGHT / 2 + 4}" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold" opacity="0.9">${layer.coatingType.thickness} мм</text>
+            <text x="${x + 8}" y="${y + LAYER_HEIGHT / 2 + 4}" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold" opacity="0.9">${String(layer.coatingType.thickness)} мм</text>
             
             <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 - 2}" fill="#e5e7eb" font-family="Arial, sans-serif" font-size="11" font-weight="500">${layer.coatingType.name}</text>
-            <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 + 12}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="10">${layer.coatingType.thickness} мм</text>
+            <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 + 12}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="10">${String(layer.coatingType.thickness)} мм</text>
           `;
         })
         .join('\n')}
@@ -154,9 +154,9 @@ export const exportPieAsPNG = (pie: Pie, showGaps: boolean = true): Promise<stri
           const x = PADDING + 30;
           return `
             <rect x="${x}" y="${y}" width="${PATTERN_WIDTH}" height="${LAYER_HEIGHT}" fill="url(#p-${layer.id})" stroke="#4b5563" stroke-width="0.5" rx="2"/>
-            <text x="${x + 8}" y="${y + LAYER_HEIGHT / 2 + 4}" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold" opacity="0.9">${layer.coatingType.thickness} мм</text>
+            <text x="${x + 8}" y="${y + LAYER_HEIGHT / 2 + 4}" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold" opacity="0.9">${String(layer.coatingType.thickness)} мм</text>
             <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 - 2}" fill="#e5e7eb" font-family="Arial, sans-serif" font-size="11" font-weight="500">${layer.coatingType.name}</text>
-            <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 + 12}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="10">${layer.coatingType.thickness} мм</text>
+            <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 + 12}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="10">${String(layer.coatingType.thickness)} мм</text>
           `;
         })
         .join('\n')}
