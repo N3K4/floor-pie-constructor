@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { CoatingType, Pie, PieLayer } from './types';
 import { coatingTypes } from './data';
 import { PatternRenderer } from './PatternRenderer';
+import { PieExportImage, downloadPieImage, exportPieAsPNG } from './PieExportImage';
 
 const STORAGE_KEY = 'pie-constructor-data';
 
@@ -18,6 +19,10 @@ function App() {
   const [newPieNumber, setNewPieNumber] = useState('');
   const [newPieName, setNewPieName] = useState('');
   const [showExport, setShowExport] = useState(false);
+  const [exportTab, setExportTab] = useState<'text' | 'image'>('image');
+  const [withGaps, setWithGaps] = useState(true);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(pies));
@@ -140,6 +145,36 @@ function App() {
         .join('\n')}\n${'─'.repeat(50)}\nИТОГО: ${totalThickness} мм`
     : '';
 
+  const openExport = useCallback(() => {
+    setShowExport(true);
+    setExportTab('image');
+    setPreviewUrl(null);
+  }, []);
+
+  const generatePreview = useCallback(async () => {
+    if (!selectedPie) return;
+    setIsGenerating(true);
+    try {
+      const url = await exportPieAsPNG(selectedPie, withGaps);
+      setPreviewUrl(url);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [selectedPie, withGaps]);
+
+  useEffect(() => {
+    if (showExport && exportTab === 'image' && selectedPie) {
+      generatePreview();
+    }
+  }, [showExport, exportTab, withGaps, selectedPie, generatePreview]);
+
+  const handleDownloadImage = useCallback(async () => {
+    if (!selectedPie) return;
+    await downloadPieImage(selectedPie, withGaps);
+  }, [selectedPie, withGaps]);
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col">
       {/* Header */}
@@ -154,7 +189,7 @@ function App() {
         </div>
         {selectedPie && selectedPie.layers.length > 0 && (
           <button
-            onClick={() => setShowExport(!showExport)}
+            onClick={openExport}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
           >
             📋 Экспорт
@@ -164,23 +199,114 @@ function App() {
 
       {/* Export Modal */}
       {showExport && selectedPie && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowExport(false)}>
-          <div className="bg-gray-800 rounded-xl p-6 max-w-lg w-full border border-gray-600" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-200">Экспорт спецификации</h3>
-              <button onClick={() => setShowExport(false)} className="text-gray-400 hover:text-white">✕</button>
+        <div
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowExport(false)}
+        >
+          <div
+            className="bg-gray-800 rounded-xl w-full max-w-2xl border border-gray-600 flex flex-col max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-200">
+                Экспорт — Пирог №{selectedPie.number}
+              </h3>
+              <button
+                onClick={() => setShowExport(false)}
+                className="text-gray-400 hover:text-white text-lg"
+              >
+                ✕
+              </button>
             </div>
-            <pre className="bg-gray-900 rounded-lg p-4 text-sm text-gray-300 font-mono whitespace-pre-wrap overflow-auto max-h-64">
-              {exportText}
-            </pre>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(exportText);
-              }}
-              className="mt-4 w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors"
-            >
-              📋 Скопировать в буфер
-            </button>
+
+            {/* Tabs */}
+            <div className="flex border-b border-gray-700">
+              <button
+                onClick={() => setExportTab('image')}
+                className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+                  exportTab === 'image'
+                    ? 'text-blue-400 border-b-2 border-blue-400 bg-blue-500/5'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                🖼️ Картинка
+              </button>
+              <button
+                onClick={() => setExportTab('text')}
+                className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+                  exportTab === 'text'
+                    ? 'text-blue-400 border-b-2 border-blue-400 bg-blue-500/5'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                📝 Текст
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {exportTab === 'image' && (
+                <div>
+                  {/* Options */}
+                  <div className="flex items-center gap-4 mb-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={withGaps}
+                        onChange={(e) => setWithGaps(e.target.checked)}
+                        className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-300">Зазоры между слоями</span>
+                    </label>
+                  </div>
+
+                  {/* Preview */}
+                  <div className="bg-gray-900 rounded-lg p-4 border border-gray-700 overflow-auto">
+                    {isGenerating ? (
+                      <div className="flex items-center justify-center h-48">
+                        <div className="text-gray-400 text-sm">Генерация...</div>
+                      </div>
+                    ) : previewUrl ? (
+                      <img
+                        src={previewUrl}
+                        alt="Превью пирога"
+                        className="max-w-full h-auto mx-auto rounded"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-48">
+                        <div className="text-gray-400 text-sm">Нет превью</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Download button */}
+                  <button
+                    onClick={handleDownloadImage}
+                    disabled={!previewUrl || isGenerating}
+                    className="mt-4 w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    💾 Скачать PNG
+                  </button>
+                </div>
+              )}
+
+              {exportTab === 'text' && (
+                <div>
+                  <pre className="bg-gray-900 rounded-lg p-4 text-sm text-gray-300 font-mono whitespace-pre-wrap overflow-auto max-h-64 border border-gray-700">
+                    {exportText}
+                  </pre>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(exportText);
+                    }}
+                    className="mt-4 w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    📋 Скопировать в буфер
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -371,7 +497,6 @@ function App() {
                   {/* Layers */}
                   <div className="ml-4 space-y-0.5">
                     {[...selectedPie.layers].reverse().map((layer, displayIdx) => {
-                      const realIdx = selectedPie.layers.length - 1 - displayIdx;
                       const maxThickness = Math.max(...selectedPie.layers.map(l => l.coatingType.thickness));
                       const scaleFactor = Math.max(layer.coatingType.thickness / maxThickness, 0.2);
                       const layerHeight = Math.max(scaleFactor * 60, 18);
