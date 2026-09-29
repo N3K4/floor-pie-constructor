@@ -1,7 +1,7 @@
 export interface CoatingType {
   id: string;
   name: string;
-  thickness: number;
+  thickness: string;
   color: string;
   pattern: string;
 }

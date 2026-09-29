@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pie } from './types';
+import { parseThicknessValue } from './data';
 
 interface PieExportImageProps {
   pie: Pie;
@@ -7,8 +8,7 @@ interface PieExportImageProps {
 }
 
 const GAP = 4;
-const LAYER_MIN_HEIGHT = 16;
-const LAYER_MAX_HEIGHT = 120;
+const LAYER_HEIGHT = 40;
 const LABEL_WIDTH = 280;
 const PATTERN_WIDTH = 200;
 const PADDING = 30;
@@ -37,6 +37,8 @@ const getPatternDef = (pattern: string, id: string): string => {
       return `${base}<rect width="20" height="20" fill="__COLOR__"/><line x1="2" y1="3" x2="8" y2="7" stroke="rgba(0,0,0,0.12)" stroke-width="0.5"/><line x1="12" y1="5" x2="18" y2="9" stroke="rgba(0,0,0,0.12)" stroke-width="0.5"/><line x1="5" y1="12" x2="11" y2="16" stroke="rgba(0,0,0,0.12)" stroke-width="0.5"/><line x1="14" y1="14" x2="19" y2="18" stroke="rgba(0,0,0,0.12)" stroke-width="0.5"/></pattern>`;
     case 'tiles':
       return `${base}<rect width="20" height="20" fill="__COLOR__"/><rect x="1" y="1" width="8" height="8" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="0.5" rx="0.5"/><rect x="11" y="1" width="8" height="8" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="0.5" rx="0.5"/><rect x="1" y="11" width="8" height="8" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="0.5" rx="0.5"/><rect x="11" y="11" width="8" height="8" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="0.5" rx="0.5"/></pattern>`;
+    case 'glue':
+      return `${base}<rect width="20" height="20" fill="__COLOR__"/><polygon points="0,10 4,2 8,10" fill="rgba(0,0,0,0.12)"/><polygon points="8,10 12,2 16,10" fill="rgba(0,0,0,0.12)"/><polygon points="4,20 8,12 12,20" fill="rgba(0,0,0,0.12)"/><polygon points="12,20 16,12 20,20" fill="rgba(0,0,0,0.12)"/></pattern>`;
     case 'metal':
       return `${base}<rect width="20" height="20" fill="__COLOR__"/><rect width="20" height="10" fill="rgba(255,255,255,0.1)"/><line x1="0" y1="7" x2="20" y2="7" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/></pattern>`;
     default:
@@ -46,23 +48,16 @@ const getPatternDef = (pattern: string, id: string): string => {
 
 export const PieExportImage: React.FC<PieExportImageProps> = ({ pie, showGaps = true }) => {
   const gap = showGaps ? GAP : 0;
-  const maxThickness = Math.max(...pie.layers.map((l) => l.coatingType.thickness));
-  const totalThickness = pie.layers.reduce((s, l) => s + l.coatingType.thickness, 0);
+  const totalThickness = pie.layers.reduce((s, l) => s + parseThicknessValue(l.coatingType.thickness), 0);
 
   const layersReversed = [...pie.layers].reverse();
 
-  const layerHeights = layersReversed.map(
-    (l) => Math.max((l.coatingType.thickness / maxThickness) * LAYER_MAX_HEIGHT, LAYER_MIN_HEIGHT)
-  );
-
-  const totalHeight =
-    layerHeights.reduce((s, h) => s + h, 0) +
-    gap * (layersReversed.length - 1) +
-    PADDING * 2 +
-    HEADER_HEIGHT;
+  const totalLayersHeight =
+    LAYER_HEIGHT * layersReversed.length +
+    gap * (layersReversed.length - 1);
 
   const svgWidth = PATTERN_WIDTH + LABEL_WIDTH + PADDING * 2 + 60;
-  const svgHeight = totalHeight;
+  const svgHeight = totalLayersHeight + PADDING * 2 + HEADER_HEIGHT;
 
   const patternDefs = pie.layers
     .map((l) => getPatternDef(l.coatingType.pattern, l.id).replace(/__COLOR__/g, l.coatingType.color))
@@ -71,7 +66,7 @@ export const PieExportImage: React.FC<PieExportImageProps> = ({ pie, showGaps = 
   let currentY = PADDING + HEADER_HEIGHT;
   const layerPositions = layersReversed.map((_, i) => {
     const y = currentY;
-    currentY += layerHeights[i] + gap;
+    currentY += LAYER_HEIGHT + gap;
     return y;
   });
 
@@ -87,25 +82,22 @@ export const PieExportImage: React.FC<PieExportImageProps> = ({ pie, showGaps = 
       <text x="${PADDING}" y="${PADDING + 42}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="12">${pie.name} • Общая толщина: ${totalThickness} мм</text>
       
       <!-- Dimension line -->
-      <line x1="${PADDING + 10}" y1="${PADDING + HEADER_HEIGHT}" x2="${PADDING + 10}" y2="${PADDING + HEADER_HEIGHT + layerHeights.reduce((s, h) => s + h, 0) + gap * (layersReversed.length - 1)}" stroke="#6b7280" stroke-width="1"/>
+      <line x1="${PADDING + 10}" y1="${PADDING + HEADER_HEIGHT}" x2="${PADDING + 10}" y2="${PADDING + HEADER_HEIGHT + totalLayersHeight}" stroke="#6b7280" stroke-width="1"/>
       <line x1="${PADDING + 5}" y1="${PADDING + HEADER_HEIGHT}" x2="${PADDING + 15}" y2="${PADDING + HEADER_HEIGHT}" stroke="#6b7280" stroke-width="1"/>
-      <line x1="${PADDING + 5}" y1="${PADDING + HEADER_HEIGHT + layerHeights.reduce((s, h) => s + h, 0) + gap * (layersReversed.length - 1)}" x2="${PADDING + 15}" y2="${PADDING + HEADER_HEIGHT + layerHeights.reduce((s, h) => s + h, 0) + gap * (layersReversed.length - 1)}" stroke="#6b7280" stroke-width="1"/>
-      <text x="${PADDING + 12}" y="${PADDING + HEADER_HEIGHT + (layerHeights.reduce((s, h) => s + h, 0) + gap * (layersReversed.length - 1)) / 2}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" transform="rotate(-90 ${PADDING + 12} ${PADDING + HEADER_HEIGHT + (layerHeights.reduce((s, h) => s + h, 0) + gap * (layersReversed.length - 1)) / 2})">${totalThickness} мм</text>
+      <line x1="${PADDING + 5}" y1="${PADDING + HEADER_HEIGHT + totalLayersHeight}" x2="${PADDING + 15}" y2="${PADDING + HEADER_HEIGHT + totalLayersHeight}" stroke="#6b7280" stroke-width="1"/>
+      <text x="${PADDING + 12}" y="${PADDING + HEADER_HEIGHT + totalLayersHeight / 2}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" transform="rotate(-90 ${PADDING + 12} ${PADDING + HEADER_HEIGHT + totalLayersHeight / 2})">${totalThickness} мм</text>
       
       <!-- Layers -->
       ${layersReversed
         .map((layer, i) => {
           const y = layerPositions[i];
-          const h = layerHeights[i];
           const x = PADDING + 30;
           return `
-            <!-- Layer ${i + 1} -->
-            <rect x="${x}" y="${y}" width="${PATTERN_WIDTH}" height="${h}" fill="url(#p-${layer.id})" stroke="#4b5563" stroke-width="0.5" rx="2"/>
-            <text x="${x + 8}" y="${y + h / 2 + 4}" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold" opacity="0.9">${layer.coatingType.thickness}мм</text>
+            <rect x="${x}" y="${y}" width="${PATTERN_WIDTH}" height="${LAYER_HEIGHT}" fill="url(#p-${layer.id})" stroke="#4b5563" stroke-width="0.5" rx="2"/>
+            <text x="${x + 8}" y="${y + LAYER_HEIGHT / 2 + 4}" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold" opacity="0.9">${layer.coatingType.thickness} мм</text>
             
-            <!-- Label -->
-            <text x="${x + PATTERN_WIDTH + 12}" y="${y + h / 2 - 2}" fill="#e5e7eb" font-family="Arial, sans-serif" font-size="11" font-weight="500">${layer.coatingType.name}</text>
-            <text x="${x + PATTERN_WIDTH + 12}" y="${y + h / 2 + 12}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="10">${layer.coatingType.thickness} мм</text>
+            <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 - 2}" fill="#e5e7eb" font-family="Arial, sans-serif" font-size="11" font-weight="500">${layer.coatingType.name}</text>
+            <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 + 12}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="10">${layer.coatingType.thickness} мм</text>
           `;
         })
         .join('\n')}
@@ -126,23 +118,16 @@ export const PieExportImage: React.FC<PieExportImageProps> = ({ pie, showGaps = 
 export const exportPieAsPNG = (pie: Pie, showGaps: boolean = true): Promise<string> => {
   return new Promise((resolve, reject) => {
     const gap = showGaps ? GAP : 0;
-    const maxThickness = Math.max(...pie.layers.map((l) => l.coatingType.thickness));
-    const totalThickness = pie.layers.reduce((s, l) => s + l.coatingType.thickness, 0);
+    const totalThickness = pie.layers.reduce((s, l) => s + parseThicknessValue(l.coatingType.thickness), 0);
 
     const layersReversed = [...pie.layers].reverse();
 
-    const layerHeights = layersReversed.map(
-      (l) => Math.max((l.coatingType.thickness / maxThickness) * LAYER_MAX_HEIGHT, LAYER_MIN_HEIGHT)
-    );
-
-    const totalHeight =
-      layerHeights.reduce((s, h) => s + h, 0) +
-      gap * (layersReversed.length - 1) +
-      PADDING * 2 +
-      HEADER_HEIGHT;
+    const totalLayersHeight =
+      LAYER_HEIGHT * layersReversed.length +
+      gap * (layersReversed.length - 1);
 
     const svgWidth = PATTERN_WIDTH + LABEL_WIDTH + PADDING * 2 + 60;
-    const svgHeight = totalHeight;
+    const svgHeight = totalLayersHeight + PADDING * 2 + HEADER_HEIGHT;
 
     const patternDefs = pie.layers
       .map((l) => getPatternDef(l.coatingType.pattern, l.id).replace(/__COLOR__/g, l.coatingType.color))
@@ -151,7 +136,7 @@ export const exportPieAsPNG = (pie: Pie, showGaps: boolean = true): Promise<stri
     let currentY = PADDING + HEADER_HEIGHT;
     const layerPositions = layersReversed.map((_, i) => {
       const y = currentY;
-      currentY += layerHeights[i] + gap;
+      currentY += LAYER_HEIGHT + gap;
       return y;
     });
 
@@ -160,19 +145,18 @@ export const exportPieAsPNG = (pie: Pie, showGaps: boolean = true): Promise<stri
       <rect width="${svgWidth}" height="${svgHeight}" fill="#1f2937"/>
       <text x="${PADDING}" y="${PADDING + 20}" fill="#60a5fa" font-family="Arial, sans-serif" font-size="18" font-weight="bold">Пирог №${pie.number}</text>
       <text x="${PADDING}" y="${PADDING + 42}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="12">${pie.name} • Общая толщина: ${totalThickness} мм</text>
-      <line x1="${PADDING + 10}" y1="${PADDING + HEADER_HEIGHT}" x2="${PADDING + 10}" y2="${PADDING + HEADER_HEIGHT + layerHeights.reduce((s, h) => s + h, 0) + gap * (layersReversed.length - 1)}" stroke="#6b7280" stroke-width="1"/>
+      <line x1="${PADDING + 10}" y1="${PADDING + HEADER_HEIGHT}" x2="${PADDING + 10}" y2="${PADDING + HEADER_HEIGHT + totalLayersHeight}" stroke="#6b7280" stroke-width="1"/>
       <line x1="${PADDING + 5}" y1="${PADDING + HEADER_HEIGHT}" x2="${PADDING + 15}" y2="${PADDING + HEADER_HEIGHT}" stroke="#6b7280" stroke-width="1"/>
-      <line x1="${PADDING + 5}" y1="${PADDING + HEADER_HEIGHT + layerHeights.reduce((s, h) => s + h, 0) + gap * (layersReversed.length - 1)}" x2="${PADDING + 15}" y2="${PADDING + HEADER_HEIGHT + layerHeights.reduce((s, h) => s + h, 0) + gap * (layersReversed.length - 1)}" stroke="#6b7280" stroke-width="1"/>
+      <line x1="${PADDING + 5}" y1="${PADDING + HEADER_HEIGHT + totalLayersHeight}" x2="${PADDING + 15}" y2="${PADDING + HEADER_HEIGHT + totalLayersHeight}" stroke="#6b7280" stroke-width="1"/>
       ${layersReversed
         .map((layer, i) => {
           const y = layerPositions[i];
-          const h = layerHeights[i];
           const x = PADDING + 30;
           return `
-            <rect x="${x}" y="${y}" width="${PATTERN_WIDTH}" height="${h}" fill="url(#p-${layer.id})" stroke="#4b5563" stroke-width="0.5" rx="2"/>
-            <text x="${x + 8}" y="${y + h / 2 + 4}" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold" opacity="0.9">${layer.coatingType.thickness}мм</text>
-            <text x="${x + PATTERN_WIDTH + 12}" y="${y + h / 2 - 2}" fill="#e5e7eb" font-family="Arial, sans-serif" font-size="11" font-weight="500">${layer.coatingType.name}</text>
-            <text x="${x + PATTERN_WIDTH + 12}" y="${y + h / 2 + 12}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="10">${layer.coatingType.thickness} мм</text>
+            <rect x="${x}" y="${y}" width="${PATTERN_WIDTH}" height="${LAYER_HEIGHT}" fill="url(#p-${layer.id})" stroke="#4b5563" stroke-width="0.5" rx="2"/>
+            <text x="${x + 8}" y="${y + LAYER_HEIGHT / 2 + 4}" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold" opacity="0.9">${layer.coatingType.thickness} мм</text>
+            <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 - 2}" fill="#e5e7eb" font-family="Arial, sans-serif" font-size="11" font-weight="500">${layer.coatingType.name}</text>
+            <text x="${x + PATTERN_WIDTH + 12}" y="${y + LAYER_HEIGHT / 2 + 12}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="10">${layer.coatingType.thickness} мм</text>
           `;
         })
         .join('\n')}

@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { CoatingType, Pie, PieLayer } from './types';
-import { coatingTypes } from './data';
+import { coatingTypes, parseThicknessValue } from './data';
 import { PatternRenderer } from './PatternRenderer';
-import { PieExportImage, downloadPieImage, exportPieAsPNG } from './PieExportImage';
+import { downloadPieImage, exportPieAsPNG } from './PieExportImage';
 
 const STORAGE_KEY = 'pie-constructor-data';
+const LAYER_HEIGHT = 36; // фиксированная высота слоя в визуализации
 
 function App() {
   const [pies, setPies] = useState<Pie[]>(() => {
@@ -54,7 +55,7 @@ function App() {
       if (!selectedPieId) return;
       const newLayer: PieLayer = {
         id: Date.now().toString() + Math.random().toString(36),
-        coatingType: coating,
+        coatingType: { ...coating },
         order: 0,
       };
       setPies((prev) =>
@@ -78,6 +79,24 @@ function App() {
             .filter((l) => l.id !== layerId)
             .map((l, i) => ({ ...l, order: i }));
           return { ...p, layers: updatedLayers };
+        })
+      );
+    },
+    [selectedPieId]
+  );
+
+  const updateLayerThickness = useCallback(
+    (layerId: string, thickness: string) => {
+      if (!selectedPieId) return;
+      setPies((prev) =>
+        prev.map((p) => {
+          if (p.id !== selectedPieId) return p;
+          return {
+            ...p,
+            layers: p.layers.map((l) =>
+              l.id === layerId ? { ...l, coatingType: { ...l.coatingType, thickness } } : l
+            ),
+          };
         })
       );
     },
@@ -133,7 +152,7 @@ function App() {
   );
 
   const totalThickness = selectedPie
-    ? selectedPie.layers.reduce((sum, l) => sum + l.coatingType.thickness, 0)
+    ? selectedPie.layers.reduce((sum, l) => sum + parseThicknessValue(l.coatingType.thickness), 0)
     : 0;
 
   const exportText = selectedPie
@@ -175,6 +194,107 @@ function App() {
     await downloadPieImage(selectedPie, withGaps);
   }, [selectedPie, withGaps]);
 
+  // Рендер паттерна для inline SVG в визуализации
+  const renderPatternContent = (pattern: string) => {
+    switch (pattern) {
+      case 'dots':
+        return (
+          <>
+            <circle cx="5" cy="5" r="1.5" fill="rgba(0,0,0,0.2)" />
+            <circle cx="15" cy="5" r="1.5" fill="rgba(0,0,0,0.2)" />
+            <circle cx="5" cy="15" r="1.5" fill="rgba(0,0,0,0.2)" />
+            <circle cx="15" cy="15" r="1.5" fill="rgba(0,0,0,0.2)" />
+            <circle cx="10" cy="10" r="1.5" fill="rgba(0,0,0,0.2)" />
+          </>
+        );
+      case 'gravel':
+        return (
+          <>
+            <ellipse cx="5" cy="5" rx="2" ry="1.5" fill="rgba(0,0,0,0.1)" />
+            <ellipse cx="15" cy="12" rx="3" ry="2" fill="rgba(255,255,255,0.1)" />
+            <ellipse cx="8" cy="16" rx="2" ry="1" fill="rgba(0,0,0,0.08)" />
+          </>
+        );
+      case 'mesh':
+        return (
+          <>
+            <line x1="0" y1="10" x2="20" y2="10" stroke="rgba(0,0,0,0.25)" strokeWidth="0.7" />
+            <line x1="10" y1="0" x2="10" y2="20" stroke="rgba(0,0,0,0.25)" strokeWidth="0.7" />
+          </>
+        );
+      case 'terrazzo':
+        return (
+          <>
+            <polygon points="3,3 7,5 5,8" fill="#8B4513" opacity="0.5" />
+            <polygon points="12,10 16,12 14,15" fill="#696969" opacity="0.5" />
+            <polygon points="8,14 11,16 9,18" fill="#F5F5DC" opacity="0.5" />
+          </>
+        );
+      case 'wood':
+        return (
+          <>
+            <line x1="0" y1="4" x2="20" y2="4.5" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
+            <line x1="0" y1="9" x2="20" y2="8.5" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
+            <line x1="0" y1="14" x2="20" y2="14.5" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
+            <line x1="0" y1="19" x2="20" y2="18.5" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
+          </>
+        );
+      case 'herringbone':
+        return (
+          <>
+            <rect x="1" y="1" width="8" height="4" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" transform="rotate(45 5 3)" />
+            <rect x="10" y="10" width="8" height="4" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" transform="rotate(-45 14 12)" />
+          </>
+        );
+      case 'planks':
+        return (
+          <>
+            <line x1="0" y1="5" x2="20" y2="5" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" />
+            <line x1="0" y1="10" x2="20" y2="10" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" />
+            <line x1="0" y1="15" x2="20" y2="15" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" />
+          </>
+        );
+      case 'smooth':
+        return <rect width="20" height="20" fill="rgba(255,255,255,0.05)" />;
+      case 'fibers':
+        return (
+          <>
+            <line x1="2" y1="3" x2="8" y2="7" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
+            <line x1="12" y1="5" x2="18" y2="9" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
+            <line x1="5" y1="12" x2="11" y2="16" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
+            <line x1="14" y1="14" x2="19" y2="18" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
+          </>
+        );
+      case 'tiles':
+        return (
+          <>
+            <rect x="1" y="1" width="8" height="8" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" rx="0.5" />
+            <rect x="11" y="1" width="8" height="8" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" rx="0.5" />
+            <rect x="1" y="11" width="8" height="8" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" rx="0.5" />
+            <rect x="11" y="11" width="8" height="8" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" rx="0.5" />
+          </>
+        );
+      case 'glue':
+        return (
+          <>
+            <polygon points="0,10 4,2 8,10" fill="rgba(0,0,0,0.12)" />
+            <polygon points="8,10 12,2 16,10" fill="rgba(0,0,0,0.12)" />
+            <polygon points="4,20 8,12 12,20" fill="rgba(0,0,0,0.12)" />
+            <polygon points="12,20 16,12 20,20" fill="rgba(0,0,0,0.12)" />
+          </>
+        );
+      case 'metal':
+        return (
+          <>
+            <rect width="20" height="10" fill="rgba(255,255,255,0.1)" />
+            <line x1="0" y1="7" x2="20" y2="7" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
+          </>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col">
       {/* Header */}
@@ -207,7 +327,6 @@ function App() {
             className="bg-gray-800 rounded-xl w-full max-w-2xl border border-gray-600 flex flex-col max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-700">
               <h3 className="text-lg font-semibold text-gray-200">
                 Экспорт — Пирог №{selectedPie.number}
@@ -220,7 +339,6 @@ function App() {
               </button>
             </div>
 
-            {/* Tabs */}
             <div className="flex border-b border-gray-700">
               <button
                 onClick={() => setExportTab('image')}
@@ -244,11 +362,9 @@ function App() {
               </button>
             </div>
 
-            {/* Modal Body */}
             <div className="flex-1 overflow-y-auto p-4">
               {exportTab === 'image' && (
                 <div>
-                  {/* Options */}
                   <div className="flex items-center gap-4 mb-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -261,7 +377,6 @@ function App() {
                     </label>
                   </div>
 
-                  {/* Preview */}
                   <div className="bg-gray-900 rounded-lg p-4 border border-gray-700 overflow-auto">
                     {isGenerating ? (
                       <div className="flex items-center justify-center h-48">
@@ -280,7 +395,6 @@ function App() {
                     )}
                   </div>
 
-                  {/* Download button */}
                   <button
                     onClick={handleDownloadImage}
                     disabled={!previewUrl || isGenerating}
@@ -366,7 +480,7 @@ function App() {
                       Пирог №{pie.number}
                     </div>
                     <div className="text-[10px] text-gray-400 mt-0.5">
-                      {pie.layers.length} слоёв • {pie.layers.reduce((s, l) => s + l.coatingType.thickness, 0)} мм
+                      {pie.layers.length} слоёв • {pie.layers.reduce((s, l) => s + parseThicknessValue(l.coatingType.thickness), 0)} мм
                     </div>
                   </div>
                   <button
@@ -391,7 +505,7 @@ function App() {
               🎨 Палитра покрытий
             </h2>
             <p className="text-[10px] text-gray-400 mt-0.5">
-              {selectedPieId ? 'Нажмите на покрытие, чтобы добавить в пирог' : 'Сначала выберите или создайте пирог'}
+              {selectedPieId ? 'Нажмите на покрытие, чтобы добавить в пирог. Толщину можно изменить в списке слоёв.' : 'Сначала выберите или создайте пирог'}
             </p>
           </div>
 
@@ -404,7 +518,7 @@ function App() {
                   disabled={!selectedPieId}
                   className={`group relative flex items-center gap-2.5 p-2.5 rounded-lg border transition-all text-left ${
                     selectedPieId
-                      ? 'bg-gray-800 border-gray-600 hover:border-blue-500 hover:bg-gray-750 cursor-pointer hover:shadow-lg hover:shadow-blue-500/5'
+                      ? 'bg-gray-800 border-gray-600 hover:border-blue-500 cursor-pointer hover:shadow-lg hover:shadow-blue-500/5'
                       : 'bg-gray-800/50 border-gray-700 cursor-not-allowed opacity-40'
                   }`}
                 >
@@ -431,7 +545,7 @@ function App() {
         </div>
 
         {/* Right Panel - Pie Visualization */}
-        <div className="w-[380px] bg-gray-800 border-l border-gray-700 flex flex-col flex-shrink-0">
+        <div className="w-[420px] bg-gray-800 border-l border-gray-700 flex flex-col flex-shrink-0">
           <div className="px-4 py-2.5 border-b border-gray-700">
             <h2 className="text-sm font-semibold text-gray-200 flex items-center gap-1.5">
               📐 Визуализация пирога
@@ -489,167 +603,94 @@ function App() {
                   <div className="absolute -left-1 top-0 bottom-0 flex flex-col items-center">
                     <div className="w-px flex-1 bg-gray-500" />
                     <div className="text-[9px] text-gray-400 font-mono bg-gray-800 px-0.5 py-0.5 rounded">
-                      {totalThickness}
+                      {selectedPie.layers.length}
                     </div>
                     <div className="w-px flex-1 bg-gray-500" />
                   </div>
 
-                  {/* Layers */}
-                  <div className="ml-4 space-y-0.5">
-                    {[...selectedPie.layers].reverse().map((layer, displayIdx) => {
-                      const maxThickness = Math.max(...selectedPie.layers.map(l => l.coatingType.thickness));
-                      const scaleFactor = Math.max(layer.coatingType.thickness / maxThickness, 0.2);
-                      const layerHeight = Math.max(scaleFactor * 60, 18);
-
-                      return (
-                        <div key={layer.id} className="group relative flex items-stretch gap-2">
-                          {/* Layer bar with pattern */}
-                          <div className="flex-1 relative">
-                            <div
-                              className="w-full rounded-sm overflow-hidden border border-gray-600/50 transition-all group-hover:border-blue-500/50"
-                              style={{ height: `${layerHeight}px` }}
-                            >
-                              <svg width="100%" height="100%" preserveAspectRatio="none">
-                                <defs>
-                                  <pattern
-                                    id={`pat-${layer.id}`}
-                                    x="0" y="0" width="20" height="20"
-                                    patternUnits="userSpaceOnUse"
-                                  >
-                                    <rect width="20" height="20" fill={layer.coatingType.color} />
-                                    {layer.coatingType.pattern === 'dots' && (
-                                      <>
-                                        <circle cx="5" cy="5" r="1.5" fill="rgba(0,0,0,0.2)" />
-                                        <circle cx="15" cy="5" r="1.5" fill="rgba(0,0,0,0.2)" />
-                                        <circle cx="5" cy="15" r="1.5" fill="rgba(0,0,0,0.2)" />
-                                        <circle cx="15" cy="15" r="1.5" fill="rgba(0,0,0,0.2)" />
-                                        <circle cx="10" cy="10" r="1.5" fill="rgba(0,0,0,0.2)" />
-                                      </>
-                                    )}
-                                    {layer.coatingType.pattern === 'gravel' && (
-                                      <>
-                                        <ellipse cx="5" cy="5" rx="2" ry="1.5" fill="rgba(0,0,0,0.1)" />
-                                        <ellipse cx="15" cy="12" rx="3" ry="2" fill="rgba(255,255,255,0.1)" />
-                                        <ellipse cx="8" cy="16" rx="2" ry="1" fill="rgba(0,0,0,0.08)" />
-                                      </>
-                                    )}
-                                    {layer.coatingType.pattern === 'mesh' && (
-                                      <>
-                                        <line x1="0" y1="10" x2="20" y2="10" stroke="rgba(0,0,0,0.25)" strokeWidth="0.7" />
-                                        <line x1="10" y1="0" x2="10" y2="20" stroke="rgba(0,0,0,0.25)" strokeWidth="0.7" />
-                                      </>
-                                    )}
-                                    {layer.coatingType.pattern === 'terrazzo' && (
-                                      <>
-                                        <polygon points="3,3 7,5 5,8" fill="#8B4513" opacity="0.5" />
-                                        <polygon points="12,10 16,12 14,15" fill="#696969" opacity="0.5" />
-                                        <polygon points="8,14 11,16 9,18" fill="#F5F5DC" opacity="0.5" />
-                                      </>
-                                    )}
-                                    {layer.coatingType.pattern === 'wood' && (
-                                      <>
-                                        <line x1="0" y1="4" x2="20" y2="4.5" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
-                                        <line x1="0" y1="9" x2="20" y2="8.5" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
-                                        <line x1="0" y1="14" x2="20" y2="14.5" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
-                                        <line x1="0" y1="19" x2="20" y2="18.5" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
-                                      </>
-                                    )}
-                                    {layer.coatingType.pattern === 'herringbone' && (
-                                      <>
-                                        <rect x="1" y="1" width="8" height="4" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" transform="rotate(45 5 3)" />
-                                        <rect x="10" y="10" width="8" height="4" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" transform="rotate(-45 14 12)" />
-                                      </>
-                                    )}
-                                    {layer.coatingType.pattern === 'planks' && (
-                                      <>
-                                        <line x1="0" y1="5" x2="20" y2="5" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" />
-                                        <line x1="0" y1="10" x2="20" y2="10" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" />
-                                        <line x1="0" y1="15" x2="20" y2="15" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" />
-                                      </>
-                                    )}
-                                    {layer.coatingType.pattern === 'smooth' && (
-                                      <rect width="20" height="20" fill="rgba(255,255,255,0.05)" />
-                                    )}
-                                    {layer.coatingType.pattern === 'fibers' && (
-                                      <>
-                                        <line x1="2" y1="3" x2="8" y2="7" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
-                                        <line x1="12" y1="5" x2="18" y2="9" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
-                                        <line x1="5" y1="12" x2="11" y2="16" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
-                                        <line x1="14" y1="14" x2="19" y2="18" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
-                                      </>
-                                    )}
-                                    {layer.coatingType.pattern === 'tiles' && (
-                                      <>
-                                        <rect x="1" y="1" width="8" height="8" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" rx="0.5" />
-                                        <rect x="11" y="1" width="8" height="8" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" rx="0.5" />
-                                        <rect x="1" y="11" width="8" height="8" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" rx="0.5" />
-                                        <rect x="11" y="11" width="8" height="8" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" rx="0.5" />
-                                      </>
-                                    )}
-                                    {layer.coatingType.pattern === 'metal' && (
-                                      <>
-                                        <rect width="20" height="10" fill="rgba(255,255,255,0.1)" />
-                                        <line x1="0" y1="7" x2="20" y2="7" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
-                                      </>
-                                    )}
-                                  </pattern>
-                                </defs>
-                                <rect width="100%" height="100%" fill={`url(#pat-${layer.id})`} />
-                              </svg>
-                            </div>
-
-                            {/* Thickness badge */}
-                            <div className="absolute left-1 top-1/2 -translate-y-1/2">
-                              <div className="text-[9px] text-white font-bold bg-black/60 px-1 py-0.5 rounded backdrop-blur-sm">
-                                {layer.coatingType.thickness}мм
-                              </div>
-                            </div>
+                  {/* Layers — одинаковая высота, с зазорами */}
+                  <div className="ml-4 space-y-1.5">
+                    {[...selectedPie.layers].reverse().map((layer) => (
+                      <div key={layer.id} className="group relative flex items-stretch gap-2">
+                        {/* Layer bar with pattern */}
+                        <div className="flex-1 relative">
+                          <div
+                            className="w-full rounded-sm overflow-hidden border border-gray-600/50 transition-all group-hover:border-blue-500/50"
+                            style={{ height: `${LAYER_HEIGHT}px` }}
+                          >
+                            <svg width="100%" height="100%" preserveAspectRatio="none">
+                              <defs>
+                                <pattern
+                                  id={`pat-${layer.id}`}
+                                  x="0" y="0" width="20" height="20"
+                                  patternUnits="userSpaceOnUse"
+                                >
+                                  <rect width="20" height="20" fill={layer.coatingType.color} />
+                                  {renderPatternContent(layer.coatingType.pattern)}
+                                </pattern>
+                              </defs>
+                              <rect width="100%" height="100%" fill={`url(#pat-${layer.id})`} />
+                            </svg>
                           </div>
 
-                          {/* Layer name */}
-                          <div className="w-32 flex flex-col justify-center flex-shrink-0">
-                            <div className="text-[11px] font-medium text-gray-200 leading-tight">
-                              {layer.coatingType.name}
-                            </div>
-                            <div className="text-[9px] text-gray-500 mt-0.5">
+                          {/* Thickness badge */}
+                          <div className="absolute left-1 top-1/2 -translate-y-1/2">
+                            <div className="text-[9px] text-white font-bold bg-black/60 px-1 py-0.5 rounded backdrop-blur-sm">
                               {layer.coatingType.thickness} мм
                             </div>
                           </div>
+                        </div>
 
-                          {/* Controls */}
-                          <div className="flex flex-col justify-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                            <button
-                              onClick={() => moveLayer(layer.id, 'up')}
-                              className="text-[10px] text-gray-400 hover:text-white w-4 h-4 flex items-center justify-center rounded hover:bg-gray-600"
-                              title="Вверх"
-                            >
-                              ▲
-                            </button>
-                            <button
-                              onClick={() => moveLayer(layer.id, 'down')}
-                              className="text-[10px] text-gray-400 hover:text-white w-4 h-4 flex items-center justify-center rounded hover:bg-gray-600"
-                              title="Вниз"
-                            >
-                              ▼
-                            </button>
-                            <button
-                              onClick={() => duplicateLayer(layer)}
-                              className="text-[10px] text-gray-400 hover:text-blue-400 w-4 h-4 flex items-center justify-center rounded hover:bg-gray-600"
-                              title="Дублировать"
-                            >
-                              ⧉
-                            </button>
-                            <button
-                              onClick={() => removeLayer(layer.id)}
-                              className="text-[10px] text-red-400 hover:text-red-300 w-4 h-4 flex items-center justify-center rounded hover:bg-gray-600"
-                              title="Удалить"
-                            >
-                              ✕
-                            </button>
+                        {/* Layer name + editable thickness */}
+                        <div className="w-40 flex flex-col justify-center flex-shrink-0 gap-0.5">
+                          <div className="text-[11px] font-medium text-gray-200 leading-tight">
+                            {layer.coatingType.name}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              value={layer.coatingType.thickness}
+                              onChange={(e) => updateLayerThickness(layer.id, e.target.value)}
+                              className="w-16 px-1.5 py-0.5 bg-gray-700 border border-gray-600 rounded text-[10px] text-gray-100 focus:outline-none focus:border-blue-500 font-mono"
+                              title="Толщина (можно редактировать)"
+                            />
+                            <span className="text-[9px] text-gray-500">мм</span>
                           </div>
                         </div>
-                      );
-                    })}
+
+                        {/* Controls */}
+                        <div className="flex flex-col justify-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          <button
+                            onClick={() => moveLayer(layer.id, 'up')}
+                            className="text-[10px] text-gray-400 hover:text-white w-4 h-4 flex items-center justify-center rounded hover:bg-gray-600"
+                            title="Вверх"
+                          >
+                            ▲
+                          </button>
+                          <button
+                            onClick={() => moveLayer(layer.id, 'down')}
+                            className="text-[10px] text-gray-400 hover:text-white w-4 h-4 flex items-center justify-center rounded hover:bg-gray-600"
+                            title="Вниз"
+                          >
+                            ▼
+                          </button>
+                          <button
+                            onClick={() => duplicateLayer(layer)}
+                            className="text-[10px] text-gray-400 hover:text-blue-400 w-4 h-4 flex items-center justify-center rounded hover:bg-gray-600"
+                            title="Дублировать"
+                          >
+                            ⧉
+                          </button>
+                          <button
+                            onClick={() => removeLayer(layer.id)}
+                            className="text-[10px] text-red-400 hover:text-red-300 w-4 h-4 flex items-center justify-center rounded hover:bg-gray-600"
+                            title="Удалить"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -669,7 +710,13 @@ function App() {
                           style={{ backgroundColor: layer.coatingType.color }}
                         />
                         <span className="text-gray-300 flex-1 truncate">{layer.coatingType.name}</span>
-                        <span className="text-gray-500 font-mono text-[10px] flex-shrink-0">{layer.coatingType.thickness} мм</span>
+                        <input
+                          type="text"
+                          value={layer.coatingType.thickness}
+                          onChange={(e) => updateLayerThickness(layer.id, e.target.value)}
+                          className="w-16 px-1 py-0.5 bg-gray-700 border border-gray-600 rounded text-[10px] text-gray-300 focus:outline-none focus:border-blue-500 font-mono text-right"
+                        />
+                        <span className="text-gray-500 text-[10px] flex-shrink-0">мм</span>
                       </div>
                     ))}
                   </div>

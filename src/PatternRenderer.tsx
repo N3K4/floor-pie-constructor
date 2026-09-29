@@ -196,6 +196,23 @@ export const PatternRenderer: React.FC<PatternProps> = ({ pattern, color, width 
           </svg>
         );
 
+      case 'glue':
+        return (
+          <svg width={width} height={height} viewBox="0 0 60 60">
+            <rect width="60" height="60" fill={color} />
+            {/* Зубчики гребёнки — ряды треугольников */}
+            {Array.from({ length: 6 }).map((_, row) =>
+              Array.from({ length: 8 }).map((_, col) => (
+                <polygon
+                  key={`${row}-${col}`}
+                  points={`${col * 8},${row * 10 + 10} ${col * 8 + 4},${row * 10 + 2} ${col * 8 + 8},${row * 10 + 10}`}
+                  fill="rgba(0,0,0,0.12)"
+                />
+              ))
+            )}
+          </svg>
+        );
+
       case 'metal':
         return (
           <svg width={width} height={height} viewBox="0 0 60 60">
