@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { CoatingType, Pie, PieLayer } from './types';
-import { coatingTypes, parseThicknessValue } from './data';
+import { coatingTypes as initialCoatingTypes, parseThicknessValue } from './data';
 import { PatternRenderer } from './PatternRenderer';
 import { downloadPieImage, exportPieAsPNG } from './PieExportImage';
 
@@ -28,6 +28,16 @@ function App() {
       return [];
     }
   });
+  const [coatingTypes, setCoatingTypes] = useState<CoatingType[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY + '-palette');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.map((c: CoatingType) => ({ ...c, thickness: String(c.thickness) }));
+      }
+    } catch {}
+    return initialCoatingTypes.map((c) => ({ ...c, thickness: String(c.thickness) }));
+  });
   const [selectedPieId, setSelectedPieId] = useState<string | null>(null);
   const [newPieNumber, setNewPieNumber] = useState('');
   const [newPieName, setNewPieName] = useState('');
@@ -40,6 +50,16 @@ function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(pies));
   }, [pies]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY + '-palette', JSON.stringify(coatingTypes));
+  }, [coatingTypes]);
+
+  const updateCoatingThickness = useCallback((id: string, thickness: string) => {
+    setCoatingTypes((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, thickness } : c))
+    );
+  }, []);
 
   const selectedPie = pies.find((p) => p.id === selectedPieId) || null;
 
@@ -524,15 +544,14 @@ function App() {
           <div className="flex-1 overflow-y-auto p-3">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
               {coatingTypes.map((coating) => (
-                <button
+                <div
                   key={coating.id}
-                  onClick={() => addLayer(coating)}
-                  disabled={!selectedPieId}
-                  className={`group relative flex items-center gap-2.5 p-2.5 rounded-lg border transition-all text-left ${
+                  className={`group relative flex items-center gap-2.5 p-2.5 rounded-lg border transition-all ${
                     selectedPieId
                       ? 'bg-gray-800 border-gray-600 hover:border-blue-500 cursor-pointer hover:shadow-lg hover:shadow-blue-500/5'
-                      : 'bg-gray-800/50 border-gray-700 cursor-not-allowed opacity-40'
+                      : 'bg-gray-800/50 border-gray-700 opacity-60'
                   }`}
+                  onClick={() => selectedPieId && addLayer(coating)}
                 >
                   <div className="w-11 h-11 rounded overflow-hidden border border-gray-600 flex-shrink-0 shadow-inner">
                     <PatternRenderer pattern={coating.pattern} color={coating.color} width={44} height={44} />
@@ -541,8 +560,15 @@ function App() {
                     <div className="text-xs font-medium text-gray-200 truncate leading-tight">
                       {coating.name}
                     </div>
-                    <div className="text-[10px] text-gray-400 mt-0.5">
-                      {coating.thickness} мм
+                    <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        value={String(coating.thickness)}
+                        onChange={(e) => updateCoatingThickness(coating.id, e.target.value)}
+                        className="w-14 px-1 py-0.5 bg-gray-700 border border-gray-600 rounded text-[10px] text-gray-100 focus:outline-none focus:border-blue-500 font-mono"
+                        title="Толщина (можно редактировать)"
+                      />
+                      <span className="text-[10px] text-gray-400">мм</span>
                     </div>
                   </div>
                   {selectedPieId && (
@@ -550,7 +576,7 @@ function App() {
                       +
                     </div>
                   )}
-                </button>
+                </div>
               ))}
             </div>
           </div>
@@ -603,12 +629,6 @@ function App() {
 
             {selectedPie && selectedPie.layers.length > 0 && (
               <div>
-                {/* Total thickness header */}
-                <div className="mb-3 flex items-center justify-between bg-gray-700/50 rounded-lg px-3 py-2">
-                  <span className="text-xs text-gray-400">Общая толщина:</span>
-                  <span className="text-sm text-blue-400 font-bold">{totalThickness} мм</span>
-                </div>
-
                 {/* Pie cross-section visualization */}
                 <div className="relative">
                   {/* Dimension line on the left */}
@@ -643,13 +663,6 @@ function App() {
                               </defs>
                               <rect width="100%" height="100%" fill={`url(#pat-${layer.id})`} />
                             </svg>
-                          </div>
-
-                          {/* Thickness badge */}
-                          <div className="absolute left-1 top-1/2 -translate-y-1/2">
-                            <div className="text-[9px] text-white font-bold bg-black/60 px-1 py-0.5 rounded backdrop-blur-sm">
-                              {String(layer.coatingType.thickness)} мм
-                            </div>
                           </div>
                         </div>
 
