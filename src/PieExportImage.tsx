@@ -1,6 +1,5 @@
 import React from 'react';
 import { Pie } from './types';
-import { parseThicknessValue } from './data';
 
 interface PieExportImageProps {
   pie: Pie;
@@ -48,7 +47,6 @@ const getPatternDef = (pattern: string, id: string): string => {
 
 export const PieExportImage: React.FC<PieExportImageProps> = ({ pie, showGaps = true }) => {
   const gap = showGaps ? GAP : 0;
-  const totalThickness = pie.layers.reduce((s, l) => s + parseThicknessValue(l.coatingType.thickness), 0);
 
   const layersReversed = [...pie.layers].reverse();
 
@@ -79,13 +77,7 @@ export const PieExportImage: React.FC<PieExportImageProps> = ({ pie, showGaps = 
       
       <!-- Header -->
       <text x="${PADDING}" y="${PADDING + 20}" fill="#60a5fa" font-family="Arial, sans-serif" font-size="18" font-weight="bold">Пирог №${pie.number}</text>
-      <text x="${PADDING}" y="${PADDING + 42}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="12">${pie.name} • Общая толщина: ${totalThickness} мм</text>
-      
-      <!-- Dimension line -->
-      <line x1="${PADDING + 10}" y1="${PADDING + HEADER_HEIGHT}" x2="${PADDING + 10}" y2="${PADDING + HEADER_HEIGHT + totalLayersHeight}" stroke="#6b7280" stroke-width="1"/>
-      <line x1="${PADDING + 5}" y1="${PADDING + HEADER_HEIGHT}" x2="${PADDING + 15}" y2="${PADDING + HEADER_HEIGHT}" stroke="#6b7280" stroke-width="1"/>
-      <line x1="${PADDING + 5}" y1="${PADDING + HEADER_HEIGHT + totalLayersHeight}" x2="${PADDING + 15}" y2="${PADDING + HEADER_HEIGHT + totalLayersHeight}" stroke="#6b7280" stroke-width="1"/>
-      <text x="${PADDING + 12}" y="${PADDING + HEADER_HEIGHT + totalLayersHeight / 2}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" transform="rotate(-90 ${PADDING + 12} ${PADDING + HEADER_HEIGHT + totalLayersHeight / 2})">${totalThickness} мм</text>
+      <text x="${PADDING}" y="${PADDING + 42}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="12">${pie.name}</text>
       
       <!-- Layers -->
       ${layersReversed
@@ -101,9 +93,6 @@ export const PieExportImage: React.FC<PieExportImageProps> = ({ pie, showGaps = 
           `;
         })
         .join('\n')}
-      
-      <!-- Footer -->
-      <text x="${PADDING + 30}" y="${svgHeight - 15}" fill="#60a5fa" font-family="Arial, sans-serif" font-size="12" font-weight="bold">ИТОГО: ${totalThickness} мм</text>
     </svg>
   `;
 
@@ -118,7 +107,6 @@ export const PieExportImage: React.FC<PieExportImageProps> = ({ pie, showGaps = 
 export const exportPieAsPNG = (pie: Pie, showGaps: boolean = true): Promise<string> => {
   return new Promise((resolve, reject) => {
     const gap = showGaps ? GAP : 0;
-    const totalThickness = pie.layers.reduce((s, l) => s + parseThicknessValue(l.coatingType.thickness), 0);
 
     const layersReversed = [...pie.layers].reverse();
 
@@ -144,10 +132,7 @@ export const exportPieAsPNG = (pie: Pie, showGaps: boolean = true): Promise<stri
       <defs>${patternDefs}</defs>
       <rect width="${svgWidth}" height="${svgHeight}" fill="#1f2937"/>
       <text x="${PADDING}" y="${PADDING + 20}" fill="#60a5fa" font-family="Arial, sans-serif" font-size="18" font-weight="bold">Пирог №${pie.number}</text>
-      <text x="${PADDING}" y="${PADDING + 42}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="12">${pie.name} • Общая толщина: ${totalThickness} мм</text>
-      <line x1="${PADDING + 10}" y1="${PADDING + HEADER_HEIGHT}" x2="${PADDING + 10}" y2="${PADDING + HEADER_HEIGHT + totalLayersHeight}" stroke="#6b7280" stroke-width="1"/>
-      <line x1="${PADDING + 5}" y1="${PADDING + HEADER_HEIGHT}" x2="${PADDING + 15}" y2="${PADDING + HEADER_HEIGHT}" stroke="#6b7280" stroke-width="1"/>
-      <line x1="${PADDING + 5}" y1="${PADDING + HEADER_HEIGHT + totalLayersHeight}" x2="${PADDING + 15}" y2="${PADDING + HEADER_HEIGHT + totalLayersHeight}" stroke="#6b7280" stroke-width="1"/>
+      <text x="${PADDING}" y="${PADDING + 42}" fill="#9ca3af" font-family="Arial, sans-serif" font-size="12">${pie.name}</text>
       ${layersReversed
         .map((layer, i) => {
           const y = layerPositions[i];
@@ -160,7 +145,6 @@ export const exportPieAsPNG = (pie: Pie, showGaps: boolean = true): Promise<stri
           `;
         })
         .join('\n')}
-      <text x="${PADDING + 30}" y="${svgHeight - 15}" fill="#60a5fa" font-family="Arial, sans-serif" font-size="12" font-weight="bold">ИТОГО: ${totalThickness} мм</text>
     </svg>`;
 
     const canvas = document.createElement('canvas');

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { CoatingType, Pie, PieLayer } from './types';
-import { coatingTypes as initialCoatingTypes, parseThicknessValue } from './data';
+import { coatingTypes as initialCoatingTypes } from './data';
 import { PatternRenderer } from './PatternRenderer';
 import { downloadPieImage, exportPieAsPNG } from './PieExportImage';
 
@@ -183,17 +183,13 @@ function App() {
     [selectedPieId]
   );
 
-  const totalThickness = selectedPie
-    ? selectedPie.layers.reduce((sum, l) => sum + parseThicknessValue(l.coatingType.thickness), 0)
-    : 0;
-
   const exportText = selectedPie
     ? `ПИРОГ №${selectedPie.number} — ${selectedPie.name}\n${'═'.repeat(50)}\n\n${selectedPie.layers
         .map(
           (l, i) =>
             `${String(i + 1).padStart(2, '0')}. ${l.coatingType.name} — ${l.coatingType.thickness} мм`
         )
-        .join('\n')}\n${'─'.repeat(50)}\nИТОГО: ${totalThickness} мм`
+        .join('\n')}`
     : '';
 
   const openExport = useCallback(() => {
@@ -512,7 +508,7 @@ function App() {
                       Пирог №{pie.number}
                     </div>
                     <div className="text-[10px] text-gray-400 mt-0.5">
-                      {pie.layers.length} слоёв • {pie.layers.reduce((s, l) => s + parseThicknessValue(l.coatingType.thickness), 0)} мм
+                      {pie.layers.length} слоёв
                     </div>
                   </div>
                   <button
@@ -744,10 +740,6 @@ function App() {
                         <span className="text-gray-500 text-[10px] flex-shrink-0">мм</span>
                       </div>
                     ))}
-                  </div>
-                  <div className="mt-2 pt-2 border-t border-gray-700 flex items-center justify-between">
-                    <span className="text-[10px] text-gray-400 font-medium">ИТОГО:</span>
-                    <span className="text-xs text-blue-400 font-bold font-mono">{totalThickness} мм</span>
                   </div>
                 </div>
               </div>
