@@ -26,7 +26,7 @@ export const PatternRenderer: React.FC<PatternProps> = ({ pattern, color, width 
         return (
           <svg width={width} height={height} viewBox="0 0 60 60">
             <rect width="60" height="60" fill={color} />
-            {[5, 15, 25, 35, 45, 55].map((x) =>
+            {[5, 15, 25, 35, 45, 55].flatMap((x) =>
               [5, 15, 25, 35, 45, 55].map((y) => (
                 <circle key={`${x}-${y}`} cx={x} cy={y} r="2" fill="rgba(0,0,0,0.2)" />
               ))
@@ -109,7 +109,7 @@ export const PatternRenderer: React.FC<PatternProps> = ({ pattern, color, width 
         return (
           <svg width={width} height={height} viewBox="0 0 60 60">
             <rect width="60" height="60" fill={color} />
-            {[0, 1, 2, 3, 4, 5].map((row) =>
+            {[0, 1, 2, 3, 4, 5].flatMap((row) =>
               [0, 1, 2, 3].map((col) => (
                 <rect
                   key={`${row}-${col}`}
@@ -178,7 +178,7 @@ export const PatternRenderer: React.FC<PatternProps> = ({ pattern, color, width 
         return (
           <svg width={width} height={height} viewBox="0 0 60 60">
             <rect width="60" height="60" fill={color} />
-            {[0, 1, 2, 3].map((row) =>
+            {[0, 1, 2, 3].flatMap((row) =>
               [0, 1, 2, 3].map((col) => (
                 <rect
                   key={`${row}-${col}`}
@@ -201,7 +201,7 @@ export const PatternRenderer: React.FC<PatternProps> = ({ pattern, color, width 
           <svg width={width} height={height} viewBox="0 0 60 60">
             <rect width="60" height="60" fill={color} />
             {/* Зубчики гребёнки — ряды треугольников */}
-            {Array.from({ length: 6 }).map((_, row) =>
+            {Array.from({ length: 6 }).flatMap((_, row) =>
               Array.from({ length: 8 }).map((_, col) => (
                 <polygon
                   key={`${row}-${col}`}

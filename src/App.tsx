@@ -13,17 +13,22 @@ function App() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (!saved) return [];
       const parsed = JSON.parse(saved);
-      // Миграция: преобразуем числовые thickness в строки
-      return parsed.map((pie: Pie) => ({
-        ...pie,
-        layers: pie.layers.map((layer: PieLayer) => ({
-          ...layer,
-          coatingType: {
-            ...layer.coatingType,
-            thickness: String(layer.coatingType.thickness),
-          },
-        })),
-      }));
+      if (!Array.isArray(parsed)) return [];
+      // Миграция: преобразуем числовые thickness в строки и валидируем данные
+      return parsed
+        .filter((pie: any) => pie && pie.id && pie.number && Array.isArray(pie.layers))
+        .map((pie: Pie) => ({
+          ...pie,
+          layers: pie.layers
+            .filter((layer: any) => layer && layer.id && layer.coatingType)
+            .map((layer: PieLayer) => ({
+              ...layer,
+              coatingType: {
+                ...layer.coatingType,
+                thickness: String(layer.coatingType.thickness ?? ''),
+              },
+            })),
+        }));
     } catch {
       return [];
     }
@@ -33,7 +38,11 @@ function App() {
       const saved = localStorage.getItem(STORAGE_KEY + '-palette');
       if (saved) {
         const parsed = JSON.parse(saved);
-        return parsed.map((c: CoatingType) => ({ ...c, thickness: String(c.thickness) }));
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed
+            .filter((c: any) => c && c.id && c.name && c.color && c.pattern)
+            .map((c: CoatingType) => ({ ...c, thickness: String(c.thickness ?? '') }));
+        }
       }
     } catch {}
     return initialCoatingTypes.map((c) => ({ ...c, thickness: String(c.thickness) }));
